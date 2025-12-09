@@ -7,14 +7,15 @@
   ],
   "scripts": {
     "test": "jest",
-    "build": "echo \"No build yet\" && exit 0",
+    "build": "npm run build:backend && npm run build:infra",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "dev:backend": "npm run dev --workspace backend",
     "build:backend": "npm run build --workspace backend",
     "build:infra": "npm run build --workspace infra",
     "cdk:synth": "npm run cdk:synth --workspace infra",
-    "dev:frontend": "npm run start --workspace frontend"
+    "dev:frontend": "npm run start --workspace frontend",
+    "build:frontend": "npm run build --workspace frontend"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

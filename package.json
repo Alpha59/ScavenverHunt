@@ -8,5 +8,8 @@
   "scripts": {
     "test": "echo \"No tests yet\" && exit 0",
     "build": "echo \"No build yet\" && exit 0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }

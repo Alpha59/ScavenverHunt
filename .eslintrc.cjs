@@ -24,6 +24,10 @@ module.exports = {
     react: {
       version: 'detect',
     },
+    'import/ignore': ['react-native'],
   },
   ignorePatterns: ['dist', 'node_modules'],
+  rules: {
+    'react/react-in-jsx-scope': 'off',
+  },
 };

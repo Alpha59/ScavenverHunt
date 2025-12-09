@@ -8,5 +8,6 @@ build/
 .idea/
 .vscode/
 coverage/
+cdk.out/
 *.swp
 *.swo

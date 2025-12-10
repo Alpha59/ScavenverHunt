@@ -6,6 +6,11 @@ This repository is a TypeScript monorepo managed with npm workspaces. It is orga
 - `packages/backend`: Node.js + Express service that exposes a `/health` endpoint for local development.
 - `packages/infra`: AWS CDK (TypeScript) project with a placeholder `CoreStack` to be expanded in later phases.
 
+CDK environment configuration
+-----------------------------
+- CDK stacks use a shared helper to resolve `{ account, region }`, preferring `CDK_DEFAULT_ACCOUNT/REGION`, then `AWS_ACCOUNT/AWS_REGION`, defaulting the region to `us-east-1` (codex-sandbox).
+- Run CDK commands with `AWS_PROFILE=codex-sandbox AWS_REGION=us-east-1 npm run cdk:synth` (or `npm run cdk:list`) to target the sandbox environment.
+
 Shared tooling lives at the root:
 
 - TypeScript with a shared `tsconfig.base.json` (strict mode).

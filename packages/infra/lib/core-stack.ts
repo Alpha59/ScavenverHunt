@@ -3,6 +3,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 
 export class CoreStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
@@ -26,6 +27,17 @@ export class CoreStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'HealthLambdaName', {
       value: healthFunction.functionName,
+    });
+
+    const api = new apigateway.RestApi(this, 'ScavengerHuntApi', {
+      restApiName: 'ScavengerHuntApi',
+    });
+
+    const healthResource = api.root.addResource('health');
+    healthResource.addMethod('GET', new apigateway.LambdaIntegration(healthFunction));
+
+    new cdk.CfnOutput(this, 'ApiBaseUrl', {
+      value: api.url,
     });
   }
 }

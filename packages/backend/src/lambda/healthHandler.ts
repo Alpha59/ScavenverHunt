@@ -1,4 +1,4 @@
-import { APIGatewayProxyHandler } from 'aws-lambda';
+import type { APIGatewayProxyHandler } from 'aws-lambda';
 import { buildHealthResponse } from '../health';
 
 export const handler: APIGatewayProxyHandler = async () => {

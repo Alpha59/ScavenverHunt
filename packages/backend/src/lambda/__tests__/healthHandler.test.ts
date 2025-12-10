@@ -2,7 +2,7 @@ import { handler } from '../healthHandler';
 
 describe('health lambda handler', () => {
   it('returns a 200 with expected shape', async () => {
-    const response = await handler({} as any, {} as any, null as any);
+    const response = await handler({} as never, {} as never, null as never);
 
     expect(response).toBeDefined();
     if (!response) {

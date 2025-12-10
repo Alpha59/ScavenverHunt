@@ -37,6 +37,15 @@ npm install
 - Frontend (web export): `npm run build:frontend`
 - CDK synth: `npm run cdk:synth` (requires AWS env/profile)
 
+### Deploy (Phase 2 baseline)
+
+- Bootstrap once: `AWS_PROFILE=codex-sandbox AWS_REGION=us-east-1 npx cdk bootstrap`
+- Deploy CoreStack (health API + assets bucket): `AWS_PROFILE=codex-sandbox AWS_REGION=us-east-1 npx cdk deploy ScavengerHuntCoreStack --require-approval never`
+- Outputs include:
+  - `ApiBaseUrl` — use for frontend (`EXPO_PUBLIC_API_BASE_URL`) and integration test (`SCAVENGER_API_BASE_URL`)
+  - `AssetsBucketName`
+  - `HealthLambdaName`
+
 ## Repository Layout
 
 - `packages/frontend` — Expo app scaffold with basic screen and assets.

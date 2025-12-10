@@ -11,6 +11,14 @@ CDK environment configuration
 - CDK stacks use a shared helper to resolve `{ account, region }`, preferring `CDK_DEFAULT_ACCOUNT/REGION`, then `AWS_ACCOUNT/AWS_REGION`, defaulting the region to `us-east-1` (codex-sandbox).
 - Run CDK commands with `AWS_PROFILE=codex-sandbox AWS_REGION=us-east-1 npm run cdk:synth` (or `npm run cdk:list`) to target the sandbox environment.
 
+Phase 2 additions
+-----------------
+- `CoreStack` now provisions:
+  - `AssetsBucket` (versioned, public access blocked, retain policy) with output `AssetsBucketName`.
+  - `HealthLambda` (Node.js 18) exposing a health payload; output `HealthLambdaName`.
+  - API Gateway `/health` endpoint integrated to the Lambda; outputs `ApiBaseUrl` (and standard API endpoint).
+- Use the `ApiBaseUrl` output to configure frontend and integration tests via `EXPO_PUBLIC_API_BASE_URL` and `SCAVENGER_API_BASE_URL`.
+
 Shared tooling lives at the root:
 
 - TypeScript with a shared `tsconfig.base.json` (strict mode).

@@ -28,6 +28,7 @@ npm install
 - Lint: `npm run lint`
 - Format: `npm run format`
 - Tests (Jest): `npm test`
+- Deployed health API integration test: set `SCAVENGER_API_BASE_URL=<ApiBaseUrl from CDK deploy>` and rerun `npm test` to exercise the live `/health` endpoint.
 
 ### Builds
 

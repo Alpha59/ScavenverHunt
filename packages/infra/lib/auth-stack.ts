@@ -1,5 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 
 interface AuthStackProps extends cdk.StackProps {
   webCallbackUrls?: string[];
@@ -51,6 +53,18 @@ export class AuthStack extends cdk.Stack {
     const googleClientSecret =
       process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? this.node.tryGetContext('googleClientSecret');
 
+    const googleSecret = new secretsmanager.Secret(this, 'GoogleOAuthCredentials', {
+      secretName: 'scavenger-hunt/GoogleOAuthCredentials',
+      description: 'Google OAuth credentials for Cognito federation',
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      secretObjectValue: {
+        clientId: cdk.SecretValue.unsafePlainText(googleClientId ?? 'SET_GOOGLE_CLIENT_ID'),
+        clientSecret: cdk.SecretValue.unsafePlainText(
+          googleClientSecret ?? 'SET_GOOGLE_CLIENT_SECRET',
+        ),
+      },
+    });
+
     if (googleClientId && googleClientSecret) {
       this.googleProvider = new cognito.UserPoolIdentityProviderGoogle(this, 'GoogleIdP', {
         userPool: this.userPool,
@@ -79,6 +93,20 @@ export class AuthStack extends cdk.Stack {
       process.env.APPLE_KEY_ID ?? this.node.tryGetContext('appleKeyId');
     const applePrivateKey =
       process.env.APPLE_PRIVATE_KEY ?? this.node.tryGetContext('applePrivateKey');
+
+    const appleSecret = new secretsmanager.Secret(this, 'AppleOAuthCredentials', {
+      secretName: 'scavenger-hunt/AppleOAuthCredentials',
+      description: 'Apple Sign In credentials for Cognito federation',
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      secretObjectValue: {
+        clientId: cdk.SecretValue.unsafePlainText(appleClientId ?? 'SET_APPLE_CLIENT_ID'),
+        teamId: cdk.SecretValue.unsafePlainText(appleTeamId ?? 'SET_APPLE_TEAM_ID'),
+        keyId: cdk.SecretValue.unsafePlainText(appleKeyId ?? 'SET_APPLE_KEY_ID'),
+        privateKey: cdk.SecretValue.unsafePlainText(
+          applePrivateKey ?? 'SET_APPLE_PRIVATE_KEY_PEM',
+        ),
+      },
+    });
 
     if (appleClientId && appleTeamId && appleKeyId && applePrivateKey) {
       this.appleProvider = new cognito.UserPoolIdentityProviderApple(this, 'AppleIdP', {
@@ -165,6 +193,27 @@ export class AuthStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'CognitoHostedUiBaseUrl', {
       value: this.hostedDomain.baseUrl(),
+    });
+
+    // Parameterize key auth settings for downstream services
+    new ssm.StringParameter(this, 'CognitoDomainPrefixParam', {
+      parameterName: '/scavenger-hunt/auth/cognito-domain-prefix',
+      stringValue: domainPrefix,
+    });
+
+    new ssm.StringParameter(this, 'CognitoUserPoolIdParam', {
+      parameterName: '/scavenger-hunt/auth/cognito-user-pool-id',
+      stringValue: this.userPool.userPoolId,
+    });
+
+    new ssm.StringParameter(this, 'CognitoRegionParam', {
+      parameterName: '/scavenger-hunt/auth/cognito-region',
+      stringValue: this.region,
+    });
+
+    new ssm.StringParameter(this, 'CognitoClientIdsParam', {
+      parameterName: '/scavenger-hunt/auth/cognito-client-ids',
+      stringValue: `${this.webClient.userPoolClientId},${this.nativeClient.userPoolClientId}`,
     });
   }
 }

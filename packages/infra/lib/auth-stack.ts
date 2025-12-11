@@ -14,6 +14,7 @@ export class AuthStack extends cdk.Stack {
   public readonly nativeClient: cognito.UserPoolClient;
   public readonly googleProvider?: cognito.UserPoolIdentityProviderGoogle;
   public readonly appleProvider?: cognito.UserPoolIdentityProviderApple;
+  public readonly hostedDomain?: cognito.UserPoolDomain;
 
   constructor(scope: cdk.App, id: string, props?: AuthStackProps) {
     super(scope, id, props);
@@ -145,6 +146,25 @@ export class AuthStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'UserPoolClientNativeId', {
       value: this.nativeClient.userPoolClientId,
+    });
+
+    const domainPrefixRaw =
+      process.env.COGNITO_DOMAIN_PREFIX ?? this.node.tryGetContext('cognitoDomainPrefix');
+    const fallbackPrefix = `scavenger-hunt-${cdk.Names.uniqueId(this).slice(-8).toLowerCase()}`;
+    const domainPrefix = (domainPrefixRaw ?? fallbackPrefix)
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .slice(0, 63)
+      .replace(/-+$/g, '') || 'scavenger-hunt';
+
+    this.hostedDomain = this.userPool.addDomain('CognitoDomain', {
+      cognitoDomain: {
+        domainPrefix,
+      },
+    });
+
+    new cdk.CfnOutput(this, 'CognitoHostedUiBaseUrl', {
+      value: this.hostedDomain.baseUrl(),
     });
   }
 }

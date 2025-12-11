@@ -4,9 +4,14 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+
+export interface CoreStackProps extends cdk.StackProps {
+  usersTable?: dynamodb.ITable;
+}
 
 export class CoreStack extends cdk.Stack {
-  constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
+  constructor(scope: cdk.App, id: string, props?: CoreStackProps) {
     super(scope, id, props);
 
     const assetsBucket = new s3.Bucket(this, 'AssetsBucket', {
@@ -24,6 +29,11 @@ export class CoreStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'handler',
     });
+
+    if (props?.usersTable) {
+      healthFunction.addEnvironment('USERS_TABLE_NAME', props.usersTable.tableName);
+      props.usersTable.grantReadWriteData(healthFunction);
+    }
 
     new cdk.CfnOutput(this, 'HealthLambdaName', {
       value: healthFunction.functionName,

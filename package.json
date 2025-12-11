@@ -19,6 +19,7 @@
     "build:frontend": "npm run build --workspace frontend"
   },
   "devDependencies": {
+    "@types/aws-sdk": "^0.0.42",
     "@types/jest": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^8.49.0",
     "@typescript-eslint/parser": "^8.49.0",
@@ -31,5 +32,9 @@
     "prettier": "^3.7.4",
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.948.0",
+    "@aws-sdk/lib-dynamodb": "^3.948.0"
   }
 }

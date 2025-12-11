@@ -22,6 +22,7 @@ Phase 2 additions
 Phase 3 (start) additions
 -------------------------
 - `AuthStack` provisions a Cognito User Pool with Web and Native app clients. If `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` are provided at synth/deploy time, a Google IdP is configured and added to both clients (callback URLs default to localhost placeholders and can be adjusted via stack props).
+- If Apple env vars are provided (`APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`), an Apple IdP is configured for the same user pool clients.
 
 Shared tooling lives at the root:
 

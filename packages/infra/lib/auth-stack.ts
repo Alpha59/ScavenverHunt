@@ -13,6 +13,7 @@ export class AuthStack extends cdk.Stack {
   public readonly webClient: cognito.UserPoolClient;
   public readonly nativeClient: cognito.UserPoolClient;
   public readonly googleProvider?: cognito.UserPoolIdentityProviderGoogle;
+  public readonly appleProvider?: cognito.UserPoolIdentityProviderApple;
 
   constructor(scope: cdk.App, id: string, props?: AuthStackProps) {
     super(scope, id, props);
@@ -66,6 +67,31 @@ export class AuthStack extends cdk.Stack {
     } else {
       cdk.Annotations.of(this).addWarning(
         'Google OAuth env vars not provided; Google IdP will not be configured.',
+      );
+    }
+
+    const appleClientId =
+      process.env.APPLE_CLIENT_ID ?? this.node.tryGetContext('appleClientId');
+    const appleTeamId =
+      process.env.APPLE_TEAM_ID ?? this.node.tryGetContext('appleTeamId');
+    const appleKeyId =
+      process.env.APPLE_KEY_ID ?? this.node.tryGetContext('appleKeyId');
+    const applePrivateKey =
+      process.env.APPLE_PRIVATE_KEY ?? this.node.tryGetContext('applePrivateKey');
+
+    if (appleClientId && appleTeamId && appleKeyId && applePrivateKey) {
+      this.appleProvider = new cognito.UserPoolIdentityProviderApple(this, 'AppleIdP', {
+        userPool: this.userPool,
+        clientId: appleClientId,
+        teamId: appleTeamId,
+        keyId: appleKeyId,
+        privateKey: applePrivateKey,
+        scopes: ['email', 'name'],
+      });
+      supportedIdps.push(cognito.UserPoolClientIdentityProvider.APPLE);
+    } else {
+      cdk.Annotations.of(this).addWarning(
+        'Apple Sign-in env vars not provided; Apple IdP will not be configured.',
       );
     }
 

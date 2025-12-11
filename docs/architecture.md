@@ -19,6 +19,10 @@ Phase 2 additions
   - API Gateway `/health` endpoint integrated to the Lambda; outputs `ApiBaseUrl` (and standard API endpoint).
 - Use the `ApiBaseUrl` output to configure frontend and integration tests via `EXPO_PUBLIC_API_BASE_URL` and `SCAVENGER_API_BASE_URL`.
 
+Phase 3 (start) additions
+-------------------------
+- `AuthStack` provisions a Cognito User Pool with Web and Native app clients. If `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` are provided at synth/deploy time, a Google IdP is configured and added to both clients (callback URLs default to localhost placeholders and can be adjusted via stack props).
+
 Shared tooling lives at the root:
 
 - TypeScript with a shared `tsconfig.base.json` (strict mode).

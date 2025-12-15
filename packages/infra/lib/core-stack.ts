@@ -8,6 +8,12 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 export interface CoreStackProps extends cdk.StackProps {
   usersTable?: dynamodb.ITable;
+  authConfig?: {
+    userPoolId: string;
+    region: string;
+    clientIds: string[];
+    domainPrefix?: string;
+  };
 }
 
 export class CoreStack extends cdk.Stack {
@@ -45,6 +51,40 @@ export class CoreStack extends cdk.Stack {
 
     const healthResource = api.root.addResource('health');
     healthResource.addMethod('GET', new apigateway.LambdaIntegration(healthFunction));
+
+    const cognitoEnv = props?.authConfig
+      ? {
+          COGNITO_REGION: props.authConfig.region,
+          COGNITO_USER_POOL_ID: props.authConfig.userPoolId,
+          COGNITO_CLIENT_IDS: props.authConfig.clientIds.join(','),
+          ...(props.authConfig.domainPrefix
+            ? { COGNITO_DOMAIN_PREFIX: props.authConfig.domainPrefix }
+            : {}),
+        }
+      : {
+          COGNITO_REGION: process.env.COGNITO_REGION ?? '',
+          COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID ?? '',
+          COGNITO_CLIENT_IDS: process.env.COGNITO_CLIENT_IDS ?? '',
+          ...(process.env.COGNITO_DOMAIN_PREFIX
+            ? { COGNITO_DOMAIN_PREFIX: process.env.COGNITO_DOMAIN_PREFIX }
+            : {}),
+        };
+
+    const meFunction = new lambdaNodejs.NodejsFunction(this, 'MeLambda', {
+      entry: path.join(__dirname, '..', '..', 'backend', 'src', 'lambda', 'meHandler.ts'),
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'handler',
+      environment: {
+        ...(props?.usersTable ? { USERS_TABLE_NAME: props.usersTable.tableName } : {}),
+        ...cognitoEnv,
+      },
+    });
+    if (props?.usersTable) {
+      props.usersTable.grantReadWriteData(meFunction);
+    }
+
+    const meResource = api.root.addResource('me');
+    meResource.addMethod('GET', new apigateway.LambdaIntegration(meFunction));
 
     new cdk.CfnOutput(this, 'ApiBaseUrl', {
       value: api.url,

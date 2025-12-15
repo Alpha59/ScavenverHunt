@@ -17,6 +17,9 @@ export class AuthStack extends cdk.Stack {
   public readonly googleProvider?: cognito.UserPoolIdentityProviderGoogle;
   public readonly appleProvider?: cognito.UserPoolIdentityProviderApple;
   public readonly hostedDomain?: cognito.UserPoolDomain;
+  public readonly domainPrefix: string;
+  public readonly clientIds: string[];
+  public readonly cognitoRegion: string;
 
   constructor(scope: cdk.App, id: string, props?: AuthStackProps) {
     super(scope, id, props);
@@ -53,7 +56,7 @@ export class AuthStack extends cdk.Stack {
     const googleClientSecret =
       process.env.GOOGLE_OAUTH_CLIENT_SECRET ?? this.node.tryGetContext('googleClientSecret');
 
-    const googleSecret = new secretsmanager.Secret(this, 'GoogleOAuthCredentials', {
+    new secretsmanager.Secret(this, 'GoogleOAuthCredentials', {
       secretName: 'scavenger-hunt/GoogleOAuthCredentials',
       description: 'Google OAuth credentials for Cognito federation',
       removalPolicy: cdk.RemovalPolicy.RETAIN,
@@ -94,7 +97,7 @@ export class AuthStack extends cdk.Stack {
     const applePrivateKey =
       process.env.APPLE_PRIVATE_KEY ?? this.node.tryGetContext('applePrivateKey');
 
-    const appleSecret = new secretsmanager.Secret(this, 'AppleOAuthCredentials', {
+    new secretsmanager.Secret(this, 'AppleOAuthCredentials', {
       secretName: 'scavenger-hunt/AppleOAuthCredentials',
       description: 'Apple Sign In credentials for Cognito federation',
       removalPolicy: cdk.RemovalPolicy.RETAIN,
@@ -184,6 +187,9 @@ export class AuthStack extends cdk.Stack {
       .replace(/[^a-z0-9-]/g, '-')
       .slice(0, 63)
       .replace(/-+$/g, '') || 'scavenger-hunt';
+    this.domainPrefix = domainPrefix;
+    this.clientIds = [this.webClient.userPoolClientId, this.nativeClient.userPoolClientId];
+    this.cognitoRegion = this.region;
 
     this.hostedDomain = this.userPool.addDomain('CognitoDomain', {
       cognitoDomain: {
@@ -213,7 +219,7 @@ export class AuthStack extends cdk.Stack {
 
     new ssm.StringParameter(this, 'CognitoClientIdsParam', {
       parameterName: '/scavenger-hunt/auth/cognito-client-ids',
-      stringValue: `${this.webClient.userPoolClientId},${this.nativeClient.userPoolClientId}`,
+      stringValue: this.clientIds.join(','),
     });
   }
 }

@@ -1,5 +1,5 @@
 import { UsersRepository } from '../usersRepository';
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 
 jest.mock('@aws-sdk/lib-dynamodb', () => {
@@ -14,8 +14,9 @@ jest.mock('@aws-sdk/lib-dynamodb', () => {
   };
 });
 
-const sendMock = (DynamoDBDocumentClient.from(new DynamoDBClient({})) as any)
-  .send as jest.Mock;
+const sendMock = (
+  DynamoDBDocumentClient.from(new DynamoDBClient({})) as unknown as { send: jest.Mock }
+).send;
 
 describe('UsersRepository', () => {
   beforeEach(() => {
@@ -42,6 +43,18 @@ describe('UsersRepository', () => {
     const repo = new UsersRepository();
     const result = await repo.createOrUpdateUser({ userId: 'u1', email: 'test@example.com' });
     expect(result.userId).toBe('u1');
+    expect(sendMock).toHaveBeenCalled();
+  });
+
+  it('preserves provided createdAt when updating', async () => {
+    sendMock.mockResolvedValueOnce({});
+    const repo = new UsersRepository();
+    const result = await repo.createOrUpdateUser({
+      userId: 'u1',
+      email: 'test@example.com',
+      createdAt: '2024-01-01T00:00:00.000Z',
+    });
+    expect(result.createdAt).toBe('2024-01-01T00:00:00.000Z');
     expect(sendMock).toHaveBeenCalled();
   });
 });

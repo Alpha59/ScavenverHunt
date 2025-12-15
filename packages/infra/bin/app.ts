@@ -9,5 +9,16 @@ const app = new cdk.App();
 const env = resolveEnv();
 
 const dataStack = new DataStack(app, 'ScavengerHuntDataStack', { env });
-new CoreStack(app, 'ScavengerHuntCoreStack', { env, usersTable: dataStack.usersTable });
-new AuthStack(app, 'ScavengerHuntAuthStack', { env });
+const authStack = new AuthStack(app, 'ScavengerHuntAuthStack', { env });
+const coreStack = new CoreStack(app, 'ScavengerHuntCoreStack', {
+  env,
+  usersTable: dataStack.usersTable,
+  authConfig: {
+    userPoolId: authStack.userPool.userPoolId,
+    region: authStack.cognitoRegion,
+    clientIds: authStack.clientIds,
+    domainPrefix: authStack.domainPrefix,
+  },
+});
+
+coreStack.addDependency(authStack);

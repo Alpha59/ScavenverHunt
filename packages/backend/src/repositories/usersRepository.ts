@@ -38,11 +38,13 @@ export class UsersRepository {
     return (result.Item as UserRecord | undefined) ?? null;
   }
 
-  async createOrUpdateUser(user: Omit<UserRecord, 'createdAt' | 'updatedAt'>): Promise<UserRecord> {
+  async createOrUpdateUser(
+    user: Omit<UserRecord, 'createdAt' | 'updatedAt'> & Partial<Pick<UserRecord, 'createdAt'>>,
+  ): Promise<UserRecord> {
     const now = new Date().toISOString();
     const item: UserRecord = {
       ...user,
-      createdAt: now,
+      createdAt: user.createdAt ?? now,
       updatedAt: now,
     };
 

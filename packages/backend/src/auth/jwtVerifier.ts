@@ -1,5 +1,6 @@
-import jwt = require('jsonwebtoken');
-import jwksRsa = require('jwks-rsa');
+import type { JwtHeader, JwtPayload } from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
+import * as jwksRsa from 'jwks-rsa';
 import { loadAuthConfig } from './config';
 
 export interface AuthenticatedUser {
@@ -10,7 +11,7 @@ export interface AuthenticatedUser {
 }
 
 const getSigningKey = async (kid: string, jwksUri: string): Promise<string> => {
-  const client = jwksRsa({
+  const client = new jwksRsa.JwksClient({
     jwksUri,
     cache: true,
     rateLimit: true,
@@ -23,7 +24,7 @@ const getSigningKey = async (kid: string, jwksUri: string): Promise<string> => {
 export const verifyJwt = async (token: string): Promise<AuthenticatedUser> => {
   const { userPoolId, region, audiences } = loadAuthConfig();
   const decoded = jwt.decode(token, { complete: true }) as
-    | { header: jwt.JwtHeader; payload: jwt.JwtPayload }
+    | { header: JwtHeader; payload: JwtPayload }
     | null;
 
   if (!decoded || !decoded.header.kid) {
@@ -43,7 +44,7 @@ export const verifyJwt = async (token: string): Promise<AuthenticatedUser> => {
     algorithms: ['RS256'],
     issuer: `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`,
     audience: audienceOption,
-  }) as jwt.JwtPayload;
+  }) as JwtPayload;
 
   return {
     userId: verified.sub as string,

@@ -6,12 +6,14 @@ import { Response } from 'express';
 
 // Mock jwks-rsa to return the public key generated in each test
 jest.mock('jwks-rsa', () => {
-  return () => ({
-    getSigningKey: async () => ({
-      getPublicKey: () =>
-        (global as unknown as { __testPublicKey?: string }).__testPublicKey,
-    }),
-  });
+  return {
+    JwksClient: jest.fn().mockImplementation(() => ({
+      getSigningKey: async () => ({
+        getPublicKey: () =>
+          (global as unknown as { __testPublicKey?: string }).__testPublicKey,
+      }),
+    })),
+  };
 });
 
 describe('authMiddleware', () => {

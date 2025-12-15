@@ -33,6 +33,14 @@ Phase 3 (start) additions
 - `DataStack` now provisions a `Users` DynamoDB table (PK: userId) and exports `UsersTableName`. `CoreStack` injects `USERS_TABLE_NAME` into lambdas and grants permissions when provided.
 - `CoreStack` includes a `/me` lambda + API route secured with Cognito JWT verification. It reads `COGNITO_REGION`, `COGNITO_USER_POOL_ID`, `COGNITO_CLIENT_IDS`, and `COGNITO_DOMAIN_PREFIX` from CDK-provided environment variables wired from `AuthStack` outputs. On first authenticated call, `/me` persists a user record in the `Users` table; subsequent calls return the stored profile.
 
+Phase 4 additions
+-----------------
+- `DataStack` now provisions DynamoDB tables for all domain entities: `Hunts`, `Tasks`, `Teams`, `TeamMemberships`, `JudgeAssignments`, `Submissions`, `TeamScores` (plus the existing `Users` table), with GSIs to list by owner/hunt/user/task/team.
+- `CoreStack` wires every table name into Lambda environments and grants read/write access.
+- Backend repositories for all entities (hunts, tasks, teams, memberships, judges, submissions, scores) use DynamoDB v3 DocumentClient and are covered by unit tests.
+- New Hunts API Lambda (`/hunts`, `/hunts/{id}`) supports create/list/get/update for owners only; exposed via API Gateway with CORS enabled.
+- API contracts documented in `docs/api-contracts.md`.
+
 Shared tooling lives at the root:
 
 - TypeScript with a shared `tsconfig.base.json` (strict mode).

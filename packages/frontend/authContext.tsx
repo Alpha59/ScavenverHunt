@@ -46,6 +46,19 @@ const useAuthFlow = () => {
   );
 
   useEffect(() => {
+    if (env.bypassAuth) {
+      const user: UserProfile = {
+        userId: env.bypassUserId ?? 'dev-user',
+        displayName: env.bypassDisplayName,
+        email: env.bypassEmail,
+      };
+      const tokens: Tokens = { accessToken: 'dev-bypass-token' };
+      dispatch({ type: 'set-user', user, tokens });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     const handleResponse = async () => {
       if (!response || response.type !== 'success') return;
       if (!discovery) {

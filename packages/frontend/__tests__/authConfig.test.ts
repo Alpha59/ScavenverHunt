@@ -26,6 +26,14 @@ describe('authConfig helpers', () => {
     expect(discovery?.tokenEndpoint).toContain('/oauth2/token');
   });
 
+  it('loads bypass settings', () => {
+    process.env.EXPO_PUBLIC_AUTH_BYPASS = 'true';
+    process.env.EXPO_PUBLIC_AUTH_BYPASS_USER_ID = 'dev';
+    const env = loadAuthEnv();
+    expect(env.bypassAuth).toBe(true);
+    expect(env.bypassUserId).toBe('dev');
+  });
+
   it('returns identity_provider param', () => {
     expect(identityProviderParam('Apple')).toEqual({ identity_provider: 'Apple' });
   });

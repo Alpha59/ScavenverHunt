@@ -3,6 +3,10 @@ export type AuthEnv = {
   hostedUiUrl?: string;
   clientIdWeb?: string;
   clientIdNative?: string;
+  bypassAuth?: boolean;
+  bypassUserId?: string;
+  bypassDisplayName?: string;
+  bypassEmail?: string;
 };
 
 export type AuthProvider = 'Google' | 'Apple';
@@ -13,6 +17,10 @@ export const loadAuthEnv = (): AuthEnv => ({
   clientIdWeb: process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID_WEB,
   clientIdNative:
     process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID_NATIVE ?? process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID_WEB,
+  bypassAuth: process.env.EXPO_PUBLIC_AUTH_BYPASS === 'true',
+  bypassUserId: process.env.EXPO_PUBLIC_AUTH_BYPASS_USER_ID,
+  bypassDisplayName: process.env.EXPO_PUBLIC_AUTH_BYPASS_DISPLAY_NAME ?? 'Dev User',
+  bypassEmail: process.env.EXPO_PUBLIC_AUTH_BYPASS_EMAIL ?? 'dev@example.com',
 });
 
 export const resolveClientId = (platform: 'web' | 'ios' | 'android', env: AuthEnv): string | undefined =>

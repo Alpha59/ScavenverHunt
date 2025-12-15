@@ -7,6 +7,8 @@ export const handler: APIGatewayProxyHandler = async () => {
     statusCode: 200,
     headers: {
       'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     },
     body: JSON.stringify(payload),
   };

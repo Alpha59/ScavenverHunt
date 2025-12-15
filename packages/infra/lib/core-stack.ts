@@ -47,6 +47,11 @@ export class CoreStack extends cdk.Stack {
 
     const api = new apigateway.RestApi(this, 'ScavengerHuntApi', {
       restApiName: 'ScavengerHuntApi',
+      defaultCorsPreflightOptions: {
+        allowOrigins: ['*'],
+        allowMethods: ['OPTIONS', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD'],
+        allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+      },
     });
 
     const healthResource = api.root.addResource('health');

@@ -1,170 +1,86 @@
 import { StatusBar } from 'expo-status-bar';
-import * as AuthSession from 'expo-auth-session';
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Button, Platform, StyleSheet, Text, View } from 'react-native';
-import {
-  buildDiscovery,
-  identityProviderParam,
-  loadAuthEnv,
-  resolveClientId,
-  AuthProvider,
-} from './authConfig';
+import { AuthProvider, useAuth } from './authContext';
+import { loadAuthEnv } from './authConfig';
 
 const env = loadAuthEnv();
-const API_BASE_URL = env.apiBaseUrl;
 
-AuthSession.maybeCompleteAuthSession();
-
-type Tokens = {
-  accessToken?: string;
-  idToken?: string;
+const LoginScreen = () => {
+  const { signInWithGoogle, signInWithApple, loading, error } = useAuth();
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Sign in to Scavenger Hunt</Text>
+      <Text style={styles.subtitle}>API base: {env.apiBaseUrl ?? 'not configured'}</Text>
+      <Text style={styles.subtitle}>
+        Hosted UI: {env.hostedUiUrl ?? 'EXPO_PUBLIC_COGNITO_HOSTED_UI_URL not set'}
+      </Text>
+      <Button title="Sign in with Google" onPress={signInWithGoogle} disabled={loading} />
+      {Platform.OS === 'ios' && (
+        <Button title="Sign in with Apple" onPress={signInWithApple} disabled={loading} />
+      )}
+      {loading && <ActivityIndicator style={styles.spacer} />}
+      {error && (
+        <Text style={[styles.result, styles.error]} accessibilityRole="text">
+          {error}
+        </Text>
+      )}
+    </View>
+  );
 };
 
-export default function App() {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [tokens, setTokens] = useState<Tokens | null>(null);
-  const [user, setUser] = useState<Record<string, unknown> | null>(null);
-  const [provider, setProvider] = useState<AuthProvider>('Google');
+const MainScreen = () => {
+  const { user, tokens, loading, error, authorizedFetch, signOut } = useAuth();
+  const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const discovery = useMemo(() => buildDiscovery(env.hostedUiUrl), []);
-
-  const redirectUri = useMemo(
-    () =>
-      AuthSession.makeRedirectUri({
-        native: 'myapp://callback',
-        useProxy: Platform.OS !== 'web',
-      }),
-    [],
-  );
-
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: resolveClientId(Platform.OS === 'web' ? 'web' : Platform.OS, env) ?? '',
-      scopes: ['openid', 'email', 'profile'],
-      redirectUri,
-      usePKCE: true,
-      responseType: AuthSession.ResponseType.Code,
-      extraParams: identityProviderParam(provider),
-    },
-    discovery,
-  );
-
-  useEffect(() => {
-    const handleResponse = async () => {
-      if (!response || response.type !== 'success') return;
-      if (!discovery) {
-        setError('Hosted UI discovery not configured');
-        return;
-      }
-      setLoading(true);
-      setError(null);
-      setResult(null);
-      try {
-        const tokenResult = await AuthSession.exchangeCodeAsync(
-          {
-            code: response.params.code,
-            clientId: resolveClientId(Platform.OS === 'web' ? 'web' : Platform.OS, env) ?? '',
-            redirectUri,
-            extraParams: {
-              code_verifier: request?.codeVerifier ?? '',
-              grant_type: 'authorization_code',
-            },
-          },
-          discovery,
-        );
-        const tokenPayload: Tokens = {
-          accessToken: tokenResult.accessToken ?? tokenResult.access_token,
-          idToken: tokenResult.idToken ?? tokenResult.id_token,
-        };
-        setTokens(tokenPayload);
-        await fetchProfile(tokenPayload);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Auth failed');
-      } finally {
-        setLoading(false);
-      }
-    };
-    handleResponse();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [response]);
-
-  const fetchProfile = async (activeTokens: Tokens) => {
-    if (!API_BASE_URL) {
-      setError('EXPO_PUBLIC_API_BASE_URL not set');
-      return;
-    }
-    const bearer = activeTokens.accessToken ?? activeTokens.idToken;
-    if (!bearer) {
-      setError('No token available to call /me');
-      return;
-    }
-    setLoading(true);
-    setError(null);
+  const refreshProfile = async () => {
+    setBusy(true);
+    setMessage(null);
     try {
-      const base = API_BASE_URL.endsWith('/') ? API_BASE_URL : `${API_BASE_URL}/`;
-      const res = await fetch(`${base}me`, {
-        headers: { Authorization: `Bearer ${bearer}` },
-      });
-      if (!res.ok) {
-        throw new Error(`Failed to fetch profile (${res.status})`);
-      }
+      const res = await authorizedFetch('me');
       const json = await res.json();
-      setUser(json);
-      setResult(JSON.stringify(json, null, 2));
+      setMessage(JSON.stringify(json, null, 2));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Profile fetch failed');
+      setMessage(err instanceof Error ? err.message : 'Failed to fetch profile');
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
 
-  const handleSignIn = async (nextProvider: AuthProvider) => {
-    setProvider(nextProvider);
-    if (!discovery) {
-      setError('Hosted UI discovery not configured');
+  const checkHealth = async () => {
+    if (!env.apiBaseUrl) {
+      setMessage('EXPO_PUBLIC_API_BASE_URL not set');
       return;
     }
-    if (!request) {
-      setError('Auth request not ready yet');
-      return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const base = env.apiBaseUrl.endsWith('/') ? env.apiBaseUrl : `${env.apiBaseUrl}/`;
+      const response = await fetch(`${base}health`);
+      const json = await response.json();
+      setMessage(JSON.stringify(json, null, 2));
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Health check failed');
+    } finally {
+      setBusy(false);
     }
-    await promptAsync({
-      useProxy: Platform.OS !== 'web',
-      extraParams: identityProviderParam(nextProvider),
-    });
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Scavenger Hunt Auth (Google)</Text>
-      <Text style={styles.subtitle}>API base: {API_BASE_URL ?? 'not configured'}</Text>
-      <Text style={styles.subtitle}>
-        Hosted UI: {env.hostedUiUrl ?? 'EXPO_PUBLIC_COGNITO_HOSTED_UI_URL not set'}
+      <Text style={styles.title}>You are signed in.</Text>
+      <Text style={styles.subtitle}>Welcome {user?.displayName ?? user?.email ?? user?.userId}</Text>
+      <Text style={styles.meta}>
+        Token present: {tokens?.accessToken ? 'access' : tokens?.idToken ? 'id' : 'none'}
       </Text>
-      <Button
-        title="Sign in with Google"
-        onPress={() => handleSignIn('Google')}
-        disabled={!discovery || !request || !resolveClientId(Platform.OS === 'web' ? 'web' : Platform.OS, env) || loading}
-      />
-      {Platform.OS === 'ios' && (
-        <Button
-          title="Sign in with Apple"
-          onPress={() => handleSignIn('Apple')}
-          disabled={!discovery || !request || !resolveClientId('ios', env) || loading}
-        />
-      )}
-      {tokens?.accessToken && (
-        <Text style={styles.meta}>Access token acquired (truncated): {tokens.accessToken.slice(0, 12)}...</Text>
-      )}
-      {user && (
-        <Text style={styles.meta}>User: {(user as { displayName?: string }).displayName ?? 'Loaded'}</Text>
-      )}
-      {loading && <ActivityIndicator style={styles.spacer} />}
-      {result && (
+      <Button title="Refresh /me" onPress={refreshProfile} disabled={busy} />
+      <Button title="Check API Health" onPress={checkHealth} disabled={busy} />
+      <Button title="Sign out" onPress={signOut} disabled={loading} />
+      {(busy || loading) && <ActivityIndicator style={styles.spacer} />}
+      {message && (
         <Text style={styles.result} accessibilityRole="text">
-          {result}
+          {message}
         </Text>
       )}
       {error && (
@@ -174,6 +90,26 @@ export default function App() {
       )}
       <StatusBar style="auto" />
     </View>
+  );
+};
+
+const AuthGate = () => {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+  return user ? <MainScreen /> : <LoginScreen />;
+};
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
   );
 }
 

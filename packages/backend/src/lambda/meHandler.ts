@@ -1,4 +1,5 @@
-import { APIGatewayProxyHandler } from 'aws-lambda';
+// eslint-disable-next-line import/no-unresolved
+import type { APIGatewayProxyHandler } from 'aws-lambda';
 import { verifyAuthorizationHeader } from '../auth/jwtVerifier';
 import { UsersRepository } from '../repositories/usersRepository';
 import { getOrCreateUserProfile, serializeUser } from '../services/currentUser';
@@ -18,7 +19,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       },
       body: JSON.stringify(serializeUser(record)),
     };
-  } catch (err) {
+  } catch {
     return {
       statusCode: 401,
       headers: {

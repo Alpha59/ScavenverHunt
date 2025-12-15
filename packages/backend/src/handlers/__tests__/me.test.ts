@@ -1,5 +1,7 @@
 import { createMeHandler } from '../me';
 import { UsersRepository, UserRecord } from '../../repositories/usersRepository';
+import { AuthenticatedRequest } from '../../auth/authMiddleware';
+import { Response } from 'express';
 
 const createMockResponse = () => {
   const json = jest.fn();
@@ -22,7 +24,7 @@ describe('meHandler', () => {
   it('returns 401 when request has no user', async () => {
     const handler = createMeHandler(() => repoMock);
     const res = createMockResponse();
-    await handler({} as any, res as any, jest.fn());
+    await handler({} as AuthenticatedRequest, res as unknown as Response, jest.fn());
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({ message: 'Unauthorized' });
@@ -41,7 +43,8 @@ describe('meHandler', () => {
 
     const handler = createMeHandler(() => repoMock);
     const res = createMockResponse();
-    await handler({ user: { userId: 'user-1', email: 'test@example.com' } } as any, res as any, jest.fn());
+    const req = { user: { userId: 'user-1', email: 'test@example.com' } } as AuthenticatedRequest;
+    await handler(req, res as unknown as Response, jest.fn());
 
     expect(repoMock.createOrUpdateUser).toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({
@@ -67,7 +70,8 @@ describe('meHandler', () => {
 
     const handler = createMeHandler(() => repoMock);
     const res = createMockResponse();
-    await handler({ user: { userId: 'user-2', email: 'existing@example.com' } } as any, res as any, jest.fn());
+    const req = { user: { userId: 'user-2', email: 'existing@example.com' } } as AuthenticatedRequest;
+    await handler(req, res as unknown as Response, jest.fn());
 
     expect(repoMock.createOrUpdateUser).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({
@@ -98,13 +102,10 @@ describe('meHandler', () => {
 
     const handler = createMeHandler(() => repoMock);
     const res = createMockResponse();
-    await handler(
-      {
-        user: { userId: 'user-3', email: 'new@example.com', givenName: 'New', familyName: 'Name' },
-      } as any,
-      res as any,
-      jest.fn(),
-    );
+    const req = {
+      user: { userId: 'user-3', email: 'new@example.com', givenName: 'New', familyName: 'Name' },
+    } as AuthenticatedRequest;
+    await handler(req, res as unknown as Response, jest.fn());
 
     expect(repoMock.createOrUpdateUser).toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({

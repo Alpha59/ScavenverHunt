@@ -11,8 +11,15 @@ jest.mock('aws-cdk-lib/aws-lambda-nodejs', () => ({
 
 jest.mock('aws-cdk-lib/aws-apigateway', () => {
   const addMethod = jest.fn();
-  const resource = { addMethod };
-  const api = { root: { addResource: jest.fn(() => resource) }, url: 'https://example.test/' };
+  const resourceFactory = () => {
+    const resource = { addMethod } as {
+      addMethod: jest.Mock;
+      addResource?: jest.Mock;
+    };
+    resource.addResource = jest.fn(() => resource);
+    return resource;
+  };
+  const api = { root: { addResource: jest.fn(() => resourceFactory()) }, url: 'https://example.test/' };
   return {
     RestApi: jest.fn(() => api),
     LambdaIntegration: jest.fn(),

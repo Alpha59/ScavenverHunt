@@ -123,6 +123,26 @@ export class CoreStack extends cdk.Stack {
     const meResource = api.root.addResource('me');
     meResource.addMethod('GET', new apigateway.LambdaIntegration(meFunction));
 
+    const huntsFunction = new lambdaNodejs.NodejsFunction(this, 'HuntsLambda', {
+      entry: path.join(__dirname, '..', '..', 'backend', 'src', 'lambda', 'huntsHandler.ts'),
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'handler',
+      environment: {
+        ...tableEnv,
+        ...cognitoEnv,
+      },
+    });
+    Object.values(props?.tables ?? {}).forEach((table) => {
+      table?.grantReadWriteData(huntsFunction);
+    });
+
+    const huntsResource = api.root.addResource('hunts');
+    huntsResource.addMethod('POST', new apigateway.LambdaIntegration(huntsFunction));
+    huntsResource.addMethod('GET', new apigateway.LambdaIntegration(huntsFunction));
+    const huntById = huntsResource.addResource('{id}');
+    huntById.addMethod('GET', new apigateway.LambdaIntegration(huntsFunction));
+    huntById.addMethod('PATCH', new apigateway.LambdaIntegration(huntsFunction));
+
     new cdk.CfnOutput(this, 'ApiBaseUrl', {
       value: api.url,
     });

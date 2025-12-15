@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer, useState } from 'react';
 import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import { AuthProvider as IdpProvider, buildDiscovery, identityProviderParam, loadAuthEnv, resolveClientId } from './authConfig';
 import { AuthState, Tokens, UserProfile, authReducer, initialAuthState } from './authState';
@@ -14,7 +15,7 @@ type AuthContextValue = AuthState & {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const env = loadAuthEnv();
-AuthSession.maybeCompleteAuthSession();
+WebBrowser.maybeCompleteAuthSession();
 
 const useAuthFlow = () => {
   const [state, dispatch] = useReducer(authReducer, initialAuthState);

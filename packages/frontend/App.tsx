@@ -2,10 +2,16 @@ import { StatusBar } from 'expo-status-bar';
 import * as AuthSession from 'expo-auth-session';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Button, Platform, StyleSheet, Text, View } from 'react-native';
+import {
+  buildDiscovery,
+  identityProviderParam,
+  loadAuthEnv,
+  resolveClientId,
+  AuthProvider,
+} from './authConfig';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
-const COGNITO_HOSTED_UI_URL = process.env.EXPO_PUBLIC_COGNITO_HOSTED_UI_URL;
-const COGNITO_CLIENT_ID = process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID_WEB;
+const env = loadAuthEnv();
+const API_BASE_URL = env.apiBaseUrl;
 
 AuthSession.maybeCompleteAuthSession();
 
@@ -20,15 +26,9 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [tokens, setTokens] = useState<Tokens | null>(null);
   const [user, setUser] = useState<Record<string, unknown> | null>(null);
+  const [provider, setProvider] = useState<AuthProvider>('Google');
 
-  const discovery = useMemo(() => {
-    if (!COGNITO_HOSTED_UI_URL) return undefined;
-    return {
-      authorizationEndpoint: `${COGNITO_HOSTED_UI_URL}/oauth2/authorize`,
-      tokenEndpoint: `${COGNITO_HOSTED_UI_URL}/oauth2/token`,
-      revocationEndpoint: `${COGNITO_HOSTED_UI_URL}/oauth2/revoke`,
-    };
-  }, []);
+  const discovery = useMemo(() => buildDiscovery(env.hostedUiUrl), []);
 
   const redirectUri = useMemo(
     () =>
@@ -41,12 +41,12 @@ export default function App() {
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
-      clientId: COGNITO_CLIENT_ID ?? '',
+      clientId: resolveClientId(Platform.OS === 'web' ? 'web' : Platform.OS, env) ?? '',
       scopes: ['openid', 'email', 'profile'],
       redirectUri,
       usePKCE: true,
       responseType: AuthSession.ResponseType.Code,
-      extraParams: { identity_provider: 'Google' },
+      extraParams: identityProviderParam(provider),
     },
     discovery,
   );
@@ -65,7 +65,7 @@ export default function App() {
         const tokenResult = await AuthSession.exchangeCodeAsync(
           {
             code: response.params.code,
-            clientId: COGNITO_CLIENT_ID ?? '',
+            clientId: resolveClientId(Platform.OS === 'web' ? 'web' : Platform.OS, env) ?? '',
             redirectUri,
             extraParams: {
               code_verifier: request?.codeVerifier ?? '',
@@ -120,18 +120,41 @@ export default function App() {
     }
   };
 
+  const handleSignIn = async (nextProvider: AuthProvider) => {
+    setProvider(nextProvider);
+    if (!discovery) {
+      setError('Hosted UI discovery not configured');
+      return;
+    }
+    if (!request) {
+      setError('Auth request not ready yet');
+      return;
+    }
+    await promptAsync({
+      useProxy: Platform.OS !== 'web',
+      extraParams: identityProviderParam(nextProvider),
+    });
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Scavenger Hunt Auth (Google)</Text>
       <Text style={styles.subtitle}>API base: {API_BASE_URL ?? 'not configured'}</Text>
       <Text style={styles.subtitle}>
-        Hosted UI: {COGNITO_HOSTED_UI_URL ?? 'EXPO_PUBLIC_COGNITO_HOSTED_UI_URL not set'}
+        Hosted UI: {env.hostedUiUrl ?? 'EXPO_PUBLIC_COGNITO_HOSTED_UI_URL not set'}
       </Text>
       <Button
         title="Sign in with Google"
-        onPress={() => promptAsync({ useProxy: Platform.OS !== 'web' })}
-        disabled={!discovery || !request || !COGNITO_CLIENT_ID || loading}
+        onPress={() => handleSignIn('Google')}
+        disabled={!discovery || !request || !resolveClientId(Platform.OS === 'web' ? 'web' : Platform.OS, env) || loading}
       />
+      {Platform.OS === 'ios' && (
+        <Button
+          title="Sign in with Apple"
+          onPress={() => handleSignIn('Apple')}
+          disabled={!discovery || !request || !resolveClientId('ios', env) || loading}
+        />
+      )}
       {tokens?.accessToken && (
         <Text style={styles.meta}>Access token acquired (truncated): {tokens.accessToken.slice(0, 12)}...</Text>
       )}

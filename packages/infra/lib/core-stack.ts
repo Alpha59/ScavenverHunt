@@ -6,8 +6,19 @@ import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
-export interface CoreStackProps extends cdk.StackProps {
+export interface DataTablesProps {
   usersTable?: dynamodb.ITable;
+  huntsTable?: dynamodb.ITable;
+  tasksTable?: dynamodb.ITable;
+  teamsTable?: dynamodb.ITable;
+  teamMembershipsTable?: dynamodb.ITable;
+  judgeAssignmentsTable?: dynamodb.ITable;
+  submissionsTable?: dynamodb.ITable;
+  teamScoresTable?: dynamodb.ITable;
+}
+
+export interface CoreStackProps extends cdk.StackProps {
+  tables?: DataTablesProps;
   authConfig?: {
     userPoolId: string;
     region: string;
@@ -30,16 +41,37 @@ export class CoreStack extends cdk.Stack {
       value: assetsBucket.bucketName,
     });
 
+    const tableEnv: Record<string, string> = {
+      ...(props?.tables?.usersTable ? { USERS_TABLE_NAME: props.tables.usersTable.tableName } : {}),
+      ...(props?.tables?.huntsTable ? { HUNTS_TABLE_NAME: props.tables.huntsTable.tableName } : {}),
+      ...(props?.tables?.tasksTable ? { TASKS_TABLE_NAME: props.tables.tasksTable.tableName } : {}),
+      ...(props?.tables?.teamsTable ? { TEAMS_TABLE_NAME: props.tables.teamsTable.tableName } : {}),
+      ...(props?.tables?.teamMembershipsTable
+        ? { TEAM_MEMBERSHIPS_TABLE_NAME: props.tables.teamMembershipsTable.tableName }
+        : {}),
+      ...(props?.tables?.judgeAssignmentsTable
+        ? { JUDGE_ASSIGNMENTS_TABLE_NAME: props.tables.judgeAssignmentsTable.tableName }
+        : {}),
+      ...(props?.tables?.submissionsTable
+        ? { SUBMISSIONS_TABLE_NAME: props.tables.submissionsTable.tableName }
+        : {}),
+      ...(props?.tables?.teamScoresTable
+        ? { TEAM_SCORES_TABLE_NAME: props.tables.teamScoresTable.tableName }
+        : {}),
+    };
+
     const healthFunction = new lambdaNodejs.NodejsFunction(this, 'HealthLambda', {
       entry: path.join(__dirname, '..', '..', 'backend', 'src', 'lambda', 'healthHandler.ts'),
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'handler',
+      environment: {
+        ...tableEnv,
+      },
     });
 
-    if (props?.usersTable) {
-      healthFunction.addEnvironment('USERS_TABLE_NAME', props.usersTable.tableName);
-      props.usersTable.grantReadWriteData(healthFunction);
-    }
+    Object.values(props?.tables ?? {}).forEach((table) => {
+      table?.grantReadWriteData(healthFunction);
+    });
 
     new cdk.CfnOutput(this, 'HealthLambdaName', {
       value: healthFunction.functionName,
@@ -80,13 +112,13 @@ export class CoreStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'handler',
       environment: {
-        ...(props?.usersTable ? { USERS_TABLE_NAME: props.usersTable.tableName } : {}),
+        ...tableEnv,
         ...cognitoEnv,
       },
     });
-    if (props?.usersTable) {
-      props.usersTable.grantReadWriteData(meFunction);
-    }
+    Object.values(props?.tables ?? {}).forEach((table) => {
+      table?.grantReadWriteData(meFunction);
+    });
 
     const meResource = api.root.addResource('me');
     meResource.addMethod('GET', new apigateway.LambdaIntegration(meFunction));

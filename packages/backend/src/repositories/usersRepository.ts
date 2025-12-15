@@ -10,19 +10,13 @@ export interface UserRecord {
   updatedAt: string;
 }
 
-const getTableName = () => {
-  const tableName = process.env.USERS_TABLE_NAME;
-  if (!tableName) {
-    throw new Error('USERS_TABLE_NAME env var is required for UsersRepository');
-  }
-  return tableName;
-};
+import { tableConfig } from '../config';
 
 export class UsersRepository {
   private tableName: string;
   private client: DynamoDBDocumentClient;
 
-  constructor(tableName = getTableName()) {
+  constructor(tableName = tableConfig.usersTableName()) {
     this.tableName = tableName;
     this.client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
   }
